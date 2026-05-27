@@ -1,0 +1,431 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>QuirúrgicaTrack</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: #0f172a; color: #e2e8f0; font-family: 'Courier New', monospace; min-height: 100vh; }
+  
+  #api-setup { display: flex; align-items: center; justify-content: center; min-height: 100vh; padding: 24px; }
+  .api-card { background: #1e293b; border: 1px solid #334155; border-radius: 14px; padding: 28px; max-width: 420px; width: 100%; }
+  .api-card h2 { color: #f1f5f9; font-size: 18px; margin-bottom: 8px; }
+  .api-card p { color: #94a3b8; font-size: 12px; margin-bottom: 20px; line-height: 1.5; }
+  .api-card a { color: #06b6d4; }
+
+  header { background: #1e293b; border-bottom: 1px solid #334155; padding: 14px 16px; display: flex; align-items: center; gap: 10px; }
+  .logo { width: 36px; height: 36px; background: linear-gradient(135deg,#06b6d4,#3b82f6); border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 18px; flex-shrink: 0; }
+  .logo-text h1 { font-size: 16px; font-weight: 700; color: #f1f5f9; }
+  .logo-text p { font-size: 10px; color: #64748b; letter-spacing: 1px; }
+  .btn-csv { margin-left: auto; background: #1e3a5f; border: 1px solid #3b82f6; color: #93c5fd; padding: 6px 12px; border-radius: 6px; cursor: pointer; font-size: 11px; font-family: inherit; display: none; }
+
+  nav { background: #1e293b; border-bottom: 1px solid #334155; display: flex; }
+  nav button { flex: 1; padding: 11px 4px; background: none; border: none; border-bottom: 2px solid transparent; color: #64748b; font-size: 11px; font-family: inherit; cursor: pointer; transition: color .2s; }
+  nav button.active { color: #06b6d4; border-bottom-color: #06b6d4; }
+
+  main { max-width: 860px; margin: 0 auto; padding: 18px 14px; }
+  .tab { display: none; }
+  .tab.active { display: block; }
+
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  
+  .upload-zone { border: 2px dashed #334155; border-radius: 10px; aspect-ratio: 4/3; display: flex; align-items: center; justify-content: center; cursor: pointer; background: #1e293b; overflow: hidden; position: relative; }
+  .upload-zone img { width: 100%; height: 100%; object-fit: contain; }
+  .upload-hint { text-align: center; color: #475569; }
+  .upload-hint div:first-child { font-size: 32px; margin-bottom: 6px; }
+  .upload-hint div:last-child { font-size: 12px; }
+
+  .form-fields { display: flex; flex-direction: column; gap: 8px; }
+  label { font-size: 10px; color: #64748b; letter-spacing: 1px; display: block; margin-bottom: 3px; }
+  input, select, textarea { width: 100%; background: #1e293b; border: 1px solid #334155; color: #e2e8f0; padding: 8px 10px; border-radius: 6px; font-size: 13px; font-family: inherit; outline: none; }
+  textarea { resize: vertical; }
+  input:focus, select:focus, textarea:focus { border-color: #06b6d4; }
+
+  .btn-primary { background: linear-gradient(135deg,#06b6d4,#3b82f6); border: none; color: white; padding: 11px 0; border-radius: 8px; cursor: pointer; font-size: 14px; font-weight: 700; font-family: inherit; width: 100%; margin-top: 4px; }
+  .btn-secondary { background: #334155; border: none; color: #94a3b8; padding: 8px 0; border-radius: 8px; cursor: pointer; font-size: 12px; font-family: inherit; width: 100%; margin-top: 4px; }
+
+  .spinner { text-align: center; color: #06b6d4; font-size: 13px; margin-top: 10px; display: none; }
+
+  /* Registros */
+  .empty-state { text-align: center; padding: 50px 20px; color: #475569; }
+  .empty-state div:first-child { font-size: 40px; margin-bottom: 10px; }
+  .tbl-wrap { overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; font-size: 12px; }
+  th { padding: 7px 10px; text-align: left; color: #64748b; font-weight: 500; font-size: 10px; letter-spacing: .5px; border-bottom: 1px solid #334155; }
+  td { padding: 9px 10px; border-bottom: 1px solid #1e293b; color: #cbd5e1; vertical-align: top; }
+  td:first-child { font-weight: 600; color: #f1f5f9; }
+  .badge { background: #1e3a5f; color: #93c5fd; padding: 2px 6px; border-radius: 3px; font-size: 10px; white-space: nowrap; }
+  .green { color: #22c55e; }
+  .tbl-footer { margin-top: 12px; display: flex; justify-content: space-between; align-items: center; color: #64748b; font-size: 11px; }
+
+  /* PDF */
+  .pdf-card { background: #1e293b; border: 1px solid #334155; border-radius: 10px; padding: 16px; margin-bottom: 14px; }
+  .upload-zone-sm { border: 2px dashed #334155; border-radius: 8px; padding: 22px 14px; text-align: center; cursor: pointer; background: #0f172a; }
+  .upload-zone-sm div:first-child { font-size: 28px; margin-bottom: 4px; }
+  .cross-summary { display: flex; gap: 18px; flex-wrap: wrap; margin-bottom: 10px; }
+  .cross-summary > div > div:first-child { font-size: 10px; color: #64748b; }
+  .cross-summary > div > div:last-child { font-weight: 600; font-size: 14px; }
+  .note-box { padding: 8px 10px; background: #0f172a; border-radius: 5px; color: #94a3b8; font-size: 12px; border-left: 3px solid #06b6d4; }
+  .result-card { background: #1e293b; border-radius: 9px; padding: 12px; margin-bottom: 9px; }
+  .result-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
+  .result-name { font-weight: 600; color: #f1f5f9; font-size: 13px; }
+  .estado-badge { padding: 2px 8px; border-radius: 3px; font-size: 10px; text-transform: uppercase; }
+  .result-detail { font-size: 11px; color: #94a3b8; }
+  .warn-text { color: #f59e0b; }
+
+  /* Toast */
+  #toast { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); padding: 10px 18px; border-radius: 8px; font-size: 12px; z-index: 9999; max-width: 88vw; word-break: break-word; box-shadow: 0 4px 20px rgba(0,0,0,.5); display: none; line-height: 1.4; }
+  #toast.ok { background: #14532d; border: 1px solid #22c55e; color: white; }
+  #toast.err { background: #7f1d1d; border: 1px solid #ef4444; color: white; }
+  #toast.warn { background: #78350f; border: 1px solid #f59e0b; color: white; }
+</style>
+</head>
+<body>
+
+<!-- API KEY SETUP -->
+<div id="api-setup">
+  <div class="api-card">
+    <h2>🔑 Configurar API Key</h2>
+    <p>Para usar la extracción con IA necesitás una API key de Anthropic. Se guarda solo en este dispositivo.<br><br>
+    Obtené una gratis en <a href="https://console.anthropic.com" target="_blank">console.anthropic.com</a></p>
+    <div style="margin-bottom:10px">
+      <label>ANTHROPIC API KEY</label>
+      <input type="password" id="apikey-input" placeholder="sk-ant-..." />
+    </div>
+    <button class="btn-primary" onclick="saveApiKey()">Guardar y continuar →</button>
+  </div>
+</div>
+
+<!-- MAIN APP -->
+<div id="app" style="display:none">
+  <header>
+    <div class="logo">🏥</div>
+    <div class="logo-text">
+      <h1>QuirúrgicaTrack</h1>
+      <p>GESTIÓN DE PROCEDIMIENTOS · IA</p>
+    </div>
+    <button class="btn-csv" id="btn-csv" onclick="exportCSV()">⬇ CSV</button>
+  </header>
+
+  <nav>
+    <button class="active" onclick="setTab(0,this)">📷 Cargar</button>
+    <button onclick="setTab(1,this)">📊 Registros</button>
+    <button onclick="setTab(2,this)">🔗 Cruzar PDF</button>
+  </nav>
+
+  <main>
+    <!-- TAB 0: CARGAR -->
+    <div class="tab active" id="tab0">
+      <div class="grid2">
+        <div>
+          <div class="upload-zone" id="upload-zone" onclick="document.getElementById('img-input').click()">
+            <div class="upload-hint" id="upload-hint">
+              <div>📷</div>
+              <div>Tocar para subir foto</div>
+            </div>
+            <img id="preview-img" style="display:none" />
+          </div>
+          <input type="file" id="img-input" accept="image/*" style="display:none" onchange="handleImage(event)">
+          <div class="spinner" id="spinner">⏳ Analizando con IA...</div>
+        </div>
+
+        <div class="form-fields">
+          <div><label>APELLIDO *</label><input type="text" id="f-apellido" /></div>
+          <div><label>NOMBRE</label><input type="text" id="f-nombre" /></div>
+          <div><label>FECHA</label><input type="text" id="f-fecha" placeholder="DD/MM/AAAA"/></div>
+          <div><label>MONTO ($)</label><input type="number" id="f-monto" /></div>
+          <div>
+            <label>SEGURO</label>
+            <select id="f-seguro">
+              <option value="">Seleccionar...</option>
+              <option>OSDE</option><option>Swiss Medical</option><option>Galeno</option>
+              <option>Medifé</option><option>Omint</option><option>Sancor Salud</option>
+              <option>PAMI</option><option>IOMA</option><option>IPS</option><option>Otro</option>
+            </select>
+          </div>
+          <div><label>PROCEDIMIENTO *</label><textarea id="f-procedimiento" rows="2"></textarea></div>
+          <button class="btn-primary" onclick="saveRecord()" id="btn-save">💾 Guardar</button>
+          <button class="btn-secondary" id="btn-cancel" style="display:none" onclick="cancelEdit()">Cancelar</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB 1: REGISTROS -->
+    <div class="tab" id="tab1">
+      <div id="empty-state" class="empty-state">
+        <div>📋</div>
+        <div>Sin registros</div>
+        <button class="btn-secondary" style="width:auto;margin-top:10px;padding:7px 14px" onclick="setTab(0,document.querySelector('nav button'))">+ Cargar procedimiento</button>
+      </div>
+      <div id="tbl-wrap" class="tbl-wrap" style="display:none">
+        <table>
+          <thead><tr><th>Paciente</th><th>Fecha</th><th>Seguro</th><th>Procedimiento</th><th>Monto</th><th></th></tr></thead>
+          <tbody id="tbl-body"></tbody>
+        </table>
+        <div class="tbl-footer">
+          <span id="tbl-count"></span>
+          <button onclick="exportCSV()" style="background:#1e3a5f;border:1px solid #3b82f6;color:#93c5fd;padding:5px 12px;border-radius:5px;cursor:pointer;font-size:11px;font-family:inherit">⬇ Descargar CSV</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB 2: CRUZAR PDF -->
+    <div class="tab" id="tab2">
+      <div class="pdf-card">
+        <p style="color:#94a3b8;font-size:13px;margin-bottom:12px">Subí el PDF del seguro para cruzarlo con tus registros.</p>
+        <div class="upload-zone-sm" onclick="document.getElementById('pdf-input').click()">
+          <div>📄</div>
+          <div style="color:#94a3b8;font-size:12px">Tocar para subir PDF</div>
+        </div>
+        <input type="file" id="pdf-input" accept="application/pdf" style="display:none" onchange="handlePDF(event)">
+        <div class="spinner" id="pdf-spinner">⏳ Cruzando con IA...</div>
+        <div id="no-records-warn" style="margin-top:10px;color:#f59e0b;font-size:11px;text-align:center;display:none">⚠️ Primero cargá procedimientos</div>
+      </div>
+      <div id="cross-result"></div>
+    </div>
+  </main>
+</div>
+
+<div id="toast"></div>
+
+<script>
+let records = JSON.parse(localStorage.getItem('qtrack_records') || '[]');
+let editIdx = null;
+let API_KEY = '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';
+
+function saveApiKey() {
+  const k = document.getElementById('apikey-input').value.trim();
+  if (!k.startsWith('sk-')) { showToast('⚠️ La key debe empezar con sk-', 'warn'); return; }
+  API_KEY = k;
+  localStorage.setItem('qtrack_apikey', k);
+  document.getElementById('api-setup').style.display = 'none';
+  document.getElementById('app').style.display = 'block';
+  renderTable();
+}
+
+// Si ya tiene key, ir directo a la app
+if (true) {
+  document.getElementById('api-setup').style.display = 'none';
+  document.getElementById('app').style.display = 'block';
+}
+
+function setTab(n, btn) {
+  document.querySelectorAll('.tab').forEach((t,i) => t.classList.toggle('active', i===n));
+  document.querySelectorAll('nav button').forEach((b,i) => b.classList.toggle('active', i===n));
+  if (n===1) renderTable();
+  if (n===2) document.getElementById('no-records-warn').style.display = records.length ? 'none' : 'block';
+}
+
+function readFileAsBase64(file) {
+  return new Promise((res, rej) => {
+    const r = new FileReader();
+    r.onload = () => { const s = r.result; res(s.slice(s.indexOf(',')+1)); };
+    r.onerror = () => rej(new Error('No se pudo leer el archivo'));
+    r.readAsDataURL(file);
+  });
+}
+
+async function callClaude(messages, maxTokens=1000) {
+  const resp = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-api-key': API_KEY,
+      'anthropic-version': '2023-06-01',
+      'anthropic-dangerous-direct-browser-access': 'true'
+    },
+    body: JSON.stringify({ model: 'claude-sonnet-4-5', max_tokens: maxTokens, messages })
+  });
+  let data;
+  try { data = await resp.json(); } 
+  catch(e) { const t = await resp.text().catch(()=>''); throw new Error('HTTP '+resp.status+': '+t.slice(0,120)); }
+  if (data.error) throw new Error(data.error.message || JSON.stringify(data.error));
+  if (!resp.ok) throw new Error('API '+resp.status+': '+JSON.stringify(data).slice(0,120));
+  return (data.content||[]).map(b=>b.text||'').join('').trim();
+}
+
+function extractJSON(text) {
+  const m = text.match(/\{[\s\S]*\}/);
+  if (!m) return null;
+  try { return JSON.parse(m[0]); } catch { return null; }
+}
+
+async function handleImage(e) {
+  const file = e.target.files[0]; if (!file) return;
+  const url = URL.createObjectURL(file);
+  document.getElementById('upload-hint').style.display = 'none';
+  const img = document.getElementById('preview-img');
+  img.src = url; img.style.display = 'block';
+  document.getElementById('spinner').style.display = 'block';
+  try {
+    const b64 = await readFileAsBase64(file);
+    const mt = (file.type && file.type.startsWith('image/') && file.type !== 'image/heic') ? file.type : 'image/jpeg';
+    const text = await callClaude([{role:'user',content:[
+      {type:'image',source:{type:'base64',media_type:mt,data:b64}},
+      {type:'text',text:'Extraé datos de esta hoja operatoria. SOLO JSON sin markdown:\n{"apellido":null,"nombre":null,"fecha":null,"seguro":null,"procedimiento":null}'}
+    ]}]);
+    const json = extractJSON(text);
+    if (json) {
+      if (json.apellido) document.getElementById('f-apellido').value = json.apellido;
+      if (json.nombre) document.getElementById('f-nombre').value = json.nombre;
+      if (json.fecha) document.getElementById('f-fecha').value = json.fecha;
+      if (json.seguro) { const s = document.getElementById('f-seguro'); for(let o of s.options) if(o.value===json.seguro){s.value=json.seguro;break;} }
+      if (json.procedimiento) document.getElementById('f-procedimiento').value = json.procedimiento;
+      showToast('✅ Datos extraídos. Revisá y corregí si hace falta.');
+    } else {
+      showToast('⚠️ No se pudo extraer. Completá manualmente.', 'warn');
+    }
+  } catch(err) {
+    showToast('❌ ' + err.message, 'err');
+  } finally {
+    document.getElementById('spinner').style.display = 'none';
+  }
+}
+
+function saveRecord() {
+  const ap = document.getElementById('f-apellido').value.trim();
+  const proc = document.getElementById('f-procedimiento').value.trim();
+  if (!ap || !proc) { showToast('⚠️ Apellido y procedimiento son obligatorios', 'warn'); return; }
+  const rec = {
+    id: editIdx !== null ? records[editIdx].id : Date.now(),
+    apellido: ap,
+    nombre: document.getElementById('f-nombre').value.trim(),
+    fecha: document.getElementById('f-fecha').value.trim(),
+    monto: document.getElementById('f-monto').value.trim(),
+    seguro: document.getElementById('f-seguro').value,
+    procedimiento: proc,
+  };
+  if (editIdx !== null) { records[editIdx] = rec; editIdx = null; showToast('✏️ Actualizado'); }
+  else { records.push(rec); showToast('✅ Guardado'); }
+  localStorage.setItem('qtrack_records', JSON.stringify(records));
+  clearForm();
+  setTab(1, document.querySelectorAll('nav button')[1]);
+  updateCsvBtn();
+}
+
+function clearForm() {
+  ['f-apellido','f-nombre','f-fecha','f-monto','f-procedimiento'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('f-seguro').value='';
+  document.getElementById('preview-img').style.display='none';
+  document.getElementById('upload-hint').style.display='block';
+  document.getElementById('btn-cancel').style.display='none';
+  document.getElementById('btn-save').textContent='💾 Guardar';
+}
+
+function cancelEdit() { editIdx=null; clearForm(); }
+
+function editRecord(i) {
+  const r = records[i]; editIdx = i;
+  document.getElementById('f-apellido').value = r.apellido||'';
+  document.getElementById('f-nombre').value = r.nombre||'';
+  document.getElementById('f-fecha').value = r.fecha||'';
+  document.getElementById('f-monto').value = r.monto||'';
+  document.getElementById('f-seguro').value = r.seguro||'';
+  document.getElementById('f-procedimiento').value = r.procedimiento||'';
+  document.getElementById('btn-save').textContent='✏️ Actualizar';
+  document.getElementById('btn-cancel').style.display='block';
+  setTab(0, document.querySelectorAll('nav button')[0]);
+}
+
+function deleteRecord(i) {
+  records.splice(i,1);
+  localStorage.setItem('qtrack_records', JSON.stringify(records));
+  renderTable(); updateCsvBtn();
+  showToast('🗑️ Eliminado');
+}
+
+function renderTable() {
+  const empty = document.getElementById('empty-state');
+  const wrap = document.getElementById('tbl-wrap');
+  if (!records.length) { empty.style.display='block'; wrap.style.display='none'; return; }
+  empty.style.display='none'; wrap.style.display='block';
+  document.getElementById('tbl-count').textContent = records.length + ' registro' + (records.length!==1?'s':'');
+  document.getElementById('tbl-body').innerHTML = records.map((r,i)=>`
+    <tr>
+      <td>${r.apellido}${r.nombre?', '+r.nombre:''}</td>
+      <td style="color:#94a3b8;white-space:nowrap">${r.fecha||'—'}</td>
+      <td>${r.seguro?`<span class="badge">${r.seguro}</span>`:'—'}</td>
+      <td style="max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${r.procedimiento}</td>
+      <td class="green" style="white-space:nowrap">${r.monto?'$'+r.monto:'—'}</td>
+      <td style="white-space:nowrap">
+        <button onclick="editRecord(${i})" style="background:none;border:none;cursor:pointer;font-size:13px">✏️</button>
+        <button onclick="deleteRecord(${i})" style="background:none;border:none;cursor:pointer;font-size:13px">🗑️</button>
+      </td>
+    </tr>`).join('');
+}
+
+function updateCsvBtn() {
+  document.getElementById('btn-csv').style.display = records.length ? 'block' : 'none';
+}
+
+function exportCSV() {
+  const h = ['Apellido','Nombre','Fecha','Seguro','Procedimiento','Monto'];
+  const rows = records.map(r=>[r.apellido,r.nombre,r.fecha,r.seguro,r.procedimiento,r.monto].map(v=>`"${(v||'').replace(/"/g,'""')}"`).join(','));
+  const csv = '\uFEFF' + [h.join(','),...rows].join('\n');
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8;'}));
+  a.download = 'procedimientos.csv'; a.click();
+}
+
+async function handlePDF(e) {
+  const file = e.target.files[0]; if (!file) return;
+  if (!records.length) { showToast('⚠️ Primero cargá procedimientos', 'warn'); return; }
+  document.getElementById('pdf-spinner').style.display = 'block';
+  document.getElementById('cross-result').innerHTML = '';
+  try {
+    const b64 = await readFileAsBase64(file);
+    const lista = records.map((r,i)=>`${i+1}. ${r.apellido}, ${r.nombre} | ${r.fecha} | ${r.seguro} | ${r.procedimiento}`).join('\n');
+    const text = await callClaude([{role:'user',content:[
+      {type:'document',source:{type:'base64',media_type:'application/pdf',data:b64}},
+      {type:'text',text:`Mis registros:\n${lista}\n\nCruzá con el PDF. SOLO JSON:\n{"seguro":null,"fecha_pago":null,"total_pagado":null,"procedimientos_encontrados":[{"indice_registro":null,"paciente_pdf":null,"monto_pagado":null,"estado":"coincide|no_coincide|parcial","observaciones":null}],"resumen":null}`}
+    ]}], 2000);
+    const json = extractJSON(text);
+    if (json) { renderCross(json); showToast('✅ Cruce completado'); }
+    else showToast('⚠️ No se pudo parsear el PDF', 'warn');
+  } catch(err) {
+    showToast('❌ ' + err.message, 'err');
+  } finally {
+    document.getElementById('pdf-spinner').style.display = 'none';
+  }
+}
+
+function estadoColor(e) { return {coincide:'#22c55e',no_coincide:'#ef4444',parcial:'#f59e0b'}[e]||'#94a3b8'; }
+
+function renderCross(d) {
+  const c = estadoColor;
+  let html = `<div class="pdf-card">
+    <div class="cross-summary">
+      <div><div>SEGURO</div><div>${d.seguro||'—'}</div></div>
+      <div><div>FECHA PAGO</div><div>${d.fecha_pago||'—'}</div></div>
+      <div><div>TOTAL</div><div style="color:#22c55e">${d.total_pagado||'—'}</div></div>
+    </div>
+    ${d.resumen?`<div class="note-box">${d.resumen}</div>`:''}
+  </div>`;
+  (d.procedimientos_encontrados||[]).forEach(p=>{
+    html += `<div class="result-card" style="border:1px solid ${c(p.estado)}40">
+      <div class="result-header">
+        <span class="result-name">${p.paciente_pdf||'—'}</span>
+        <span class="estado-badge" style="background:${c(p.estado)}20;color:${c(p.estado)}">${(p.estado||'').replace('_',' ')}</span>
+      </div>
+      <div class="result-detail">
+        Monto: <span style="color:#22c55e;font-weight:600">${p.monto_pagado||'—'}</span>
+        ${p.observaciones?`<br><span class="warn-text">⚠️ ${p.observaciones}</span>`:''}
+      </div>
+    </div>`;
+  });
+  document.getElementById('cross-result').innerHTML = html;
+}
+
+let toastTimer;
+function showToast(msg, type='ok') {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.className = type; t.style.display = 'block';
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(()=>t.style.display='none', 9000);
+}
+
+renderTable(); updateCsvBtn();
+</script>
+</body>
+</html>
